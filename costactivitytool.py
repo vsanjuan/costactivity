@@ -30,7 +30,7 @@ class Product(Persistent):
 		self.name = name
 		self.description = description
 		self.bill_of_materials = PersistentDict()
-		self.billofactivities = PersistentDict()
+		self.bill_of_activities = PersistentDict()
 		
 	def addMaterial(self, material_code, consumption, consumption_unit, 
 						  production_ratio, production_unit,  waste, cost_per_unit= 0 ):
@@ -62,13 +62,12 @@ class Product(Persistent):
 		production_ratio: Units of F.P. to which the consumption is referred.
 		production_unit : Unit of production to which the production ratio is related.
 		"""
-		self.activities[activity_code] = {	'activity_code': activity_code, 
+		self.bill_of_activities[activity_code] = {	'activity_code': activity_code, 
 											'consumption': consumption,
 											'activity_unit': activity_unit,
 											'production_ratio': production_ratio,
 											'production_unit': production_unit,
 											'cost_per_unit' : cost_per_unit	}
-		self.billofactivities._p_changed = True
 		self._p_changed = True
 		
 		
@@ -89,7 +88,7 @@ class Product(Persistent):
 		 # and bill of activities. I will implement this later if too many materials or activities
 		 # are loaded in memory.
 		 
-		#activitytrax = ActivityTrax().activities
+		activitytrax = ActivityTrax().activities
 		materialtrax = MaterialTrax().materials
 		
 		#print materialtrax
@@ -98,11 +97,13 @@ class Product(Persistent):
 		activity_cost = 0
 		
 		for material_code, material_usage in self.bill_of_materials.items():
-			print materialtrax[material_code].name, " " , materialtrax[material_code].cost_per_unit, " " , material_usage["consumption"]
+			#print materialtrax[material_code].name, " " , materialtrax[material_code].cost_per_unit, " " , material_usage["consumption"]
 			material_cost += materialtrax[material_code].cost_per_unit * int(material_usage["consumption"])
 		
-		# for activity_code, activity_usage in self.billofactivities:
-			# activity_cost += activitytrax[activity_code].cost_per_unit * activity_usage.consumption
+		for activity_code, activity_usage in self.bill_of_activities.items():
+			#print activitytrax[activity_code].name, " " , activitytrax[activity_code].cost_per_unit, " " , activity_usage["consumption"]
+			activity_cost += materialtrax[activity_code].cost_per_unit * int(activity_usage["consumption"])
+		
 	
 		return    material_cost #, activity_cost materialtrax
 		
@@ -111,7 +112,7 @@ class Product(Persistent):
 		materials = MaterialTrax().materials
 	
 		header = ("Product code: " + str(self.code) + "\nProduct name: " + self.name
-				  + "\nProduct description: " + self.description + "\n" )
+				  + "\nProduct description: " + self.description + "\n" + "*" * 80 + "\n" )
 				  
 		material_string = "Code   Material                 Consumption  Unit       x F.P. units  Waste \n"
 
@@ -126,8 +127,31 @@ class Product(Persistent):
 				material["production_unit"] + "        " +
 				str(material["waste"]) + "\n"
 				)
+				
+		material_string += "*" * 80 + "\n"
 		
-		header += material_string
+		# will it be possible to close the materials variable once finished ?
+		
+		header += material_string	
+		
+		activities = ActivityTrax().activities
+		
+		activity_string =  "Code   Activity                 Usage        Unit       x F.P. units  \n"
+		
+		for code, activity in self.bill_of_activities.items():
+		
+			activity_string += (
+				str(code) + "      " +
+				activities[code].name + " " * ( 25 - len(activities[code].name))  +  
+				str(activity["consumption"]) + " " * (13 - len(str(activity["consumption"]))) +
+				activity["activity_unit"] + " " * (13 - len(activity["activity_unit"])) +
+				str(activity["production_ratio"]) + " " +
+				activity["production_unit"] + "\n"
+				)
+		
+		activity_string += "*" * 80 + "\n"
+		
+		header += activity_string
 				
 		return header
 	
@@ -292,7 +316,17 @@ if __name__ == '__main__':
 	
 		# print material
 		
-	# products = ProductTrax()
+	# activities = ActivityTrax()
+	
+	# activities.addActivity(1, "Coser", "Coser", 100, "ML")
+	# activities.addActivity(2, "Cortar PPC", "Cortar plancha segun medidas", 0.8, "Corte")
+	# activities.addActivity(3, "Troquelar", "Cortar el perfil de la pieza usando un troquel", 1.2, "Golpe")
+	# activities.addActivity(4,"Ensamblar caja", "Formar la caja, poner perfiles y cantoneras, y poner los remaches", 8, "minutos")
+	
+	# for code, activity in activities.activities.items():
+		# print activity
+		
+	products = ProductTrax()
 	
 	# products.addProduct(1, "Caja PPC 400x600x200 mm", "Caja para tejas", "Caja")
 	# products.addProduct(2, "Caja PPC 800x600x200 mm", "Caja para tejas", "Caja")
@@ -305,23 +339,18 @@ if __name__ == '__main__':
 	# products.addMaterial(1, 6, 2, "unidad", 1, "caja", 1)
 	# products.addMaterial(1, 7, 8, "unidad", 1, "caja", 5)
 	
+	# products.addActivity(1 ,2 , 2, "Corte", 4 , "Caja")
+	products.addActivity(1 ,3 , 1, "Golpe", 1, "Caja")
+	# products.addActivity(1 ,4 , 1, "Montaje", 1, "Caja")
+	
+
+	for code, product in products.products.items():
+	
+		print product
 	
 	
-	# for code, product in products.products.items():
 	
-		# print product
-	
-	
-	
-	# activities = ActivitiyTrax()
-	
-	# activities.addActivity(1, "Coser", "Coser", 100, "ML")
-	# activities.addActivity(2, "Cortar PPC", "Cortar plancha segun medidas", 0.8, "Corte")
-	activities.addActivity(3, "Troquelar", "Cortar el perfil de la pieza usando un troquel", 1.2, "Golpe")
-	activities.addActivity(4,"Ensamblar caja", "Formar la caja, poner perfiles y cantoneras, y poner los remaches", 8, "minutos")
-	
-	for code, activity in activities.activities.items():
-		print activity
+
 	
 	
 

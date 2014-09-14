@@ -90,22 +90,20 @@ class Product(Persistent):
 		 
 		activitytrax = ActivityTrax().activities
 		materialtrax = MaterialTrax().materials
-		
-		#print materialtrax
 		 
 		material_cost = 0
 		activity_cost = 0
 		
 		for material_code, material_usage in self.bill_of_materials.items():
-			#print materialtrax[material_code].name, " " , materialtrax[material_code].cost_per_unit, " " , material_usage["consumption"]
-			material_cost += materialtrax[material_code].cost_per_unit * int(material_usage["consumption"])
+			#print "Coste material : " ,  str(materialtrax[material_code].cost_per_unit), "Consumo :", 
+			material_cost += materialtrax[material_code].cost_per_unit * (material_usage["consumption"])
 		
 		for activity_code, activity_usage in self.bill_of_activities.items():
-			#print activitytrax[activity_code].name, " " , activitytrax[activity_code].cost_per_unit, " " , activity_usage["consumption"]
-			activity_cost += materialtrax[activity_code].cost_per_unit * int(activity_usage["consumption"])
+			#print "Coste activity : " ,  str(activitytrax[activity_code].cost_per_unit), "Consumo :", 
+			activity_cost += activitytrax[activity_code].cost_per_unit * (activity_usage["consumption"])
 		
 	
-		return    material_cost #, activity_cost materialtrax
+		return    material_cost , activity_cost 
 		
 	def __str__(self):
 	
@@ -114,13 +112,14 @@ class Product(Persistent):
 		header = ("Product code: " + str(self.code) + "\nProduct name: " + self.name
 				  + "\nProduct description: " + self.description + "\n" + "*" * 80 + "\n" )
 				  
-		material_string = "Code   Material                 Consumption  Unit       x F.P. units  Waste \n"
+		material_string = "Code   Material                 Cost  Consumption  Unit       x F.P. units  Waste \n"
 
 		for code, material in self.bill_of_materials.items():
 		
 			material_string += (
 				str(code) + "      " +
 				materials[code].name + " " * ( 25 - len(materials[code].name))  +  
+				str(materials[code].cost_per_unit) + " " * (6 - len(str(materials[code].cost_per_unit))) +
 				str(material["consumption"]) + " " * (13 - len(str(material["consumption"]))) +
 				material["consumption_unit"] + " " * (13 - len(material["consumption_unit"])) +
 				str(material["production_ratio"]) + " " +
@@ -174,8 +173,6 @@ class Activity(Persistent):
 
 		return ("Activity Code: %s, Name: %s,\n Description: %s,\n Cost per unit: %s\n Base unit: %s"
 				% (self.code, self.name, self.description, self.cost_per_unit, self.activity_unit))
-		
-	
 		
 		
 class Material(Persistent):
@@ -316,15 +313,15 @@ if __name__ == '__main__':
 	
 		# print material
 		
-	# activities = ActivityTrax()
+	activities = ActivityTrax()
 	
 	# activities.addActivity(1, "Coser", "Coser", 100, "ML")
 	# activities.addActivity(2, "Cortar PPC", "Cortar plancha segun medidas", 0.8, "Corte")
 	# activities.addActivity(3, "Troquelar", "Cortar el perfil de la pieza usando un troquel", 1.2, "Golpe")
-	# activities.addActivity(4,"Ensamblar caja", "Formar la caja, poner perfiles y cantoneras, y poner los remaches", 8, "minutos")
+	activities.addActivity(4,"Ensamblar caja", "Formar la caja, poner perfiles y cantoneras, y poner los remaches", 0.20 , "minutos")
 	
-	# for code, activity in activities.activities.items():
-		# print activity
+	for code, activity in activities.activities.items():
+		print activity
 		
 	products = ProductTrax()
 	
@@ -340,13 +337,20 @@ if __name__ == '__main__':
 	# products.addMaterial(1, 7, 8, "unidad", 1, "caja", 5)
 	
 	# products.addActivity(1 ,2 , 2, "Corte", 4 , "Caja")
-	products.addActivity(1 ,3 , 1, "Golpe", 1, "Caja")
-	# products.addActivity(1 ,4 , 1, "Montaje", 1, "Caja")
+	# products.addActivity(1 ,3 , 1, "Golpe", 1, "Caja")
+	products.addActivity(1 ,4 , 10, "minutos", 1, "Caja")
 	
 
-	for code, product in products.products.items():
+	# for code, product in products.products.items():
 	
-		print product
+		# print product
+		
+	print products.products[1].CalculateCost()
+	
+	print products.products[1]
+	
+	
+	
 	
 	
 	

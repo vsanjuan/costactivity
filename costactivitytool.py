@@ -292,7 +292,7 @@ if __name__ == '__main__':
 	
 		# print material
 		
-	products = ProductTrax()
+	# products = ProductTrax()
 	
 	# products.addProduct(1, "Caja PPC 400x600x200 mm", "Caja para tejas", "Caja")
 	# products.addProduct(2, "Caja PPC 800x600x200 mm", "Caja para tejas", "Caja")
@@ -307,25 +307,24 @@ if __name__ == '__main__':
 	
 	
 	
-	for code, product in products.products.items():
+	# for code, product in products.products.items():
 	
-		print product
+		# print product
 	
 	
 	
 	# activities = ActivitiyTrax()
 	
 	# activities.addActivity(1, "Coser", "Coser", 100, "ML")
-	# activities.addActivity(2, "Cortar", "Cortar", 50, "Cortes")
+	# activities.addActivity(2, "Cortar PPC", "Cortar plancha segun medidas", 0.8, "Corte")
+	activities.addActivity(3, "Troquelar", "Cortar el perfil de la pieza usando un troquel", 1.2, "Golpe")
+	activities.addActivity(4,"Ensamblar caja", "Formar la caja, poner perfiles y cantoneras, y poner los remaches", 8, "minutos")
 	
-	# print activities.activities[1]
-	# print activities.activities[2]
+	for code, activity in activities.activities.items():
+		print activity
 	
-	# products.addProduct(1, "Caja A", "Caja PPC", "caja")
 	
-	# print products.products[1].name
-	
-	# products = ProductTrax()
+
 	
 
 

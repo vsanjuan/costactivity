@@ -94,13 +94,21 @@ class Product(Persistent):
 		material_cost = 0
 		activity_cost = 0
 		
-		for material_code, material_usage in self.bill_of_materials.items():
+		for material_code, material in self.bill_of_materials.items():
 			#print "Coste material : " ,  str(materialtrax[material_code].cost_per_unit), "Consumo :", 
-			material_cost += materialtrax[material_code].cost_per_unit * (material_usage["consumption"])
+			material_cost += ( 	materialtrax[material_code].cost_per_unit * 
+								material["consumption"] / 
+								material["production_ratio"] *
+								(1 + material["waste"]/100) 
+							)
+								
 		
-		for activity_code, activity_usage in self.bill_of_activities.items():
+		for activity_code, activity in self.bill_of_activities.items():
 			#print "Coste activity : " ,  str(activitytrax[activity_code].cost_per_unit), "Consumo :", 
-			activity_cost += activitytrax[activity_code].cost_per_unit * (activity_usage["consumption"])
+			activity_cost += ( 	activitytrax[activity_code].cost_per_unit * 
+								activity["consumption"] /
+								activity["production_ratio"] 
+							)
 		
 	
 		return    material_cost , activity_cost 

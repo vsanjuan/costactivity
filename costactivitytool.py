@@ -12,6 +12,9 @@ from persistent import Persistent
 from persistent.dict import PersistentDict
 from persistent.list import PersistentList
 
+#To exit the menu
+import sys
+
 class Product(Persistent):
 	"""Models a product composition by listing the materials and activities
 	needed to produce it.
@@ -44,12 +47,12 @@ class Product(Persistent):
 		waste: % of the material thrown to the waste.
 		'''
 		self.bill_of_materials[material_code] = {'material_code': material_code,
-										'consumption': consumption,
+										'consumption': consumption * 1.0,
 										'consumption_unit' : consumption_unit,
 										'production_unit': production_unit,
-										'production_ratio': production_ratio,
-										'waste' : waste,
-										'cost_per_unit': cost_per_unit}
+										'production_ratio': production_ratio * 1.0,
+										'waste' : waste * 1.0 ,
+										'cost_per_unit': cost_per_unit * 1.0}
 		self._p_changed = True
 		
 	def addActivity(self, activity_code, consumption, activity_unit, 
@@ -63,11 +66,11 @@ class Product(Persistent):
 		production_unit : Unit of production to which the production ratio is related.
 		"""
 		self.bill_of_activities[activity_code] = {	'activity_code': activity_code, 
-											'consumption': consumption,
+											'consumption': consumption * 1.0 ,
 											'activity_unit': activity_unit,
-											'production_ratio': production_ratio,
+											'production_ratio': production_ratio * 1.0 ,
 											'production_unit': production_unit,
-											'cost_per_unit' : cost_per_unit	}
+											'cost_per_unit' : cost_per_unit * 1.0	}
 		self._p_changed = True
 		
 		
@@ -86,25 +89,26 @@ class Product(Persistent):
 		 # Recovers the information about activities and materials needed to calculate the cost
 		 # Maybe it would be better to filter the activities and materials in the bill of materials
 		 # and bill of activities. I will implement this later if too many materials or activities
-		 # are loaded in memory.
+		 # are loaded in memory. One alternative is to save a reference to the material object as
+		 # ZODB database works exactly as if were python objects.
 		 
 		activitytrax = ActivityTrax().activities
 		materialtrax = MaterialTrax().materials
-		 
+		
+		# initialize the accum for the cost of materials and activities
 		material_cost = 0
 		activity_cost = 0
 		
+		# calculates the cost of each material and adds it to the material accum.
+		# takes into account the production ratio and material waste
 		for material_code, material in self.bill_of_materials.items():
-			#print "Coste material : " ,  str(materialtrax[material_code].cost_per_unit), "Consumo :", 
 			material_cost += ( 	materialtrax[material_code].cost_per_unit * 
 								material["consumption"] / 
 								material["production_ratio"] *
 								(1 + material["waste"]/100) 
 							)
-								
-		
+		# Idem as above for activities but no waste is introduced
 		for activity_code, activity in self.bill_of_activities.items():
-			#print "Coste activity : " ,  str(activitytrax[activity_code].cost_per_unit), "Consumo :", 
 			activity_cost += ( 	activitytrax[activity_code].cost_per_unit * 
 								activity["consumption"] /
 								activity["production_ratio"] 
@@ -137,19 +141,21 @@ class Product(Persistent):
 				
 		material_string += "*" * 80 + "\n"
 		
-		# will it be possible to close the materials variable once finished ?
+		# will it be possible to close the materials variable once finished ? 
+		# This way the memory will be emptied
 		
 		header += material_string	
 		
 		activities = ActivityTrax().activities
 		
-		activity_string =  "Code   Activity                 Usage        Unit       x F.P. units  \n"
+		activity_string =  "Code   Activity                Cost  Usage         Unit       x F.P. units  \n"
 		
 		for code, activity in self.bill_of_activities.items():
 		
 			activity_string += (
 				str(code) + "      " +
 				activities[code].name + " " * ( 25 - len(activities[code].name))  +  
+				str(activities[code].cost_per_unit) + " " * (6 - len(str(activities[code].cost_per_unit))) +
 				str(activity["consumption"]) + " " * (13 - len(str(activity["consumption"]))) +
 				activity["activity_unit"] + " " * (13 - len(activity["activity_unit"])) +
 				str(activity["production_ratio"]) + " " +
@@ -301,7 +307,71 @@ class ActivityTrax(Trax):
 		self.activities[code] = activity
 		transaction.commit()
 		
+class Menu:
 
+	'''Display a menu respond to choices when run. '''
+	def __init__(self):
+		self.products = ProductTrax()
+		self.choices = {
+				"1": self.show_products,
+				"2": self.search_product,
+				"3": self.add_product,
+				"4": self.modify_product,
+				"5": self.quit
+				}
+				
+	def display_menu(self):
+		print(""" 
+	Product's Menu
+	
+	1. Show all products
+	2. Buscar productos
+	3. Add Product
+	4. Modify product
+	5. Quit 
+	""")
+	
+	def run(self):
+		"""Display menu and respond to choices."""
+		while True:
+			self.display_menu()
+			choice = str(input("Enter an option: "))
+			print type(choice)
+			action = self.choices.get(choice)
+			print action
+			if action:
+				action()
+			else:
+				print("{0} is not a valid choice".format(choice))
+				
+	def show_products(self, products = None):
+		if not products:
+			for code, product in self.products.products.items():
+				print product
+					
+	def search_product(self):
+		filter = input("Search for: ")
+		notes = self.products.search(filter)
+		self.show_products(products)
+		
+	def add_product(self):
+		
+		print "Enter the following product information:"
+		product_data = ["Code", "Name", "Description", "Unidad base"]
+		params = []
+		for data in product_data:
+			memo = input("Enter %s: " % (data))
+			params.append(memo)
+			
+		self.products.addProduct(*params)
+		
+	def modify_product(self):
+	
+		print "Modifies the product"
+		
+	def quit(self):
+	
+		sys.exit(0)
 			
 			
 if __name__ == '__main__':
@@ -321,17 +391,17 @@ if __name__ == '__main__':
 	
 		# print material
 		
-	activities = ActivityTrax()
+	# activities = ActivityTrax()
 	
 	# activities.addActivity(1, "Coser", "Coser", 100, "ML")
 	# activities.addActivity(2, "Cortar PPC", "Cortar plancha segun medidas", 0.8, "Corte")
 	# activities.addActivity(3, "Troquelar", "Cortar el perfil de la pieza usando un troquel", 1.2, "Golpe")
-	activities.addActivity(4,"Ensamblar caja", "Formar la caja, poner perfiles y cantoneras, y poner los remaches", 0.20 , "minutos")
+	# activities.addActivity(4,"Ensamblar caja", "Formar la caja, poner perfiles y cantoneras, y poner los remaches", 0.20 , "minutos")
 	
-	for code, activity in activities.activities.items():
-		print activity
+	# for code, activity in activities.activities.items():
+		# print activity
 		
-	products = ProductTrax()
+	# products = ProductTrax()
 	
 	# products.addProduct(1, "Caja PPC 400x600x200 mm", "Caja para tejas", "Caja")
 	# products.addProduct(2, "Caja PPC 800x600x200 mm", "Caja para tejas", "Caja")
@@ -346,20 +416,20 @@ if __name__ == '__main__':
 	
 	# products.addActivity(1 ,2 , 2, "Corte", 4 , "Caja")
 	# products.addActivity(1 ,3 , 1, "Golpe", 1, "Caja")
-	products.addActivity(1 ,4 , 10, "minutos", 1, "Caja")
+	# products.addActivity(1 ,4 , 10, "minutos", 1, "Caja")
 	
 
 	# for code, product in products.products.items():
 	
 		# print product
 		
-	print products.products[1].CalculateCost()
+	# print products.products[1].CalculateCost()
 	
-	print products.products[1]
-	
-	
+	# print products.products[1]
 	
 	
+	
+	Menu().run()
 	
 	
 

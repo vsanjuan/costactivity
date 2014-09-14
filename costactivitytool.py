@@ -1,7 +1,16 @@
-from persistent import Persistent
+# Imports needed to open the DB and interact with it:
+from ZODB import DB
+from ZODB.FileStorage import FileStorage
+from ZODB.PersistentMapping import PersistentMapping
 import transaction
-import ZODB
-import ZODB.FileStorage
+
+# Imports needed for Persistent classes:
+# PersistentDict and PersistentList are ready to use as is.
+# Classes you create that need to be Persistent (ZODB aware)
+#     should inherit from Persistent.
+from persistent import Persistent
+from persistent.dict import PersistentDict
+from persistent.list import PersistentList
 
 class Product(Persistent):
 	"""Models a product composition by listing the materials and activities
@@ -20,8 +29,8 @@ class Product(Persistent):
 		self.code = code
 		self.name = name
 		self.description = description
-		self.bill_of_materials = {}
-		self.billofactivities = {}
+		self.bill_of_materials = PersistentDict()
+		self.billofactivities = PersistentDict()
 		
 	def addMaterial(self, material_code, consumption, consumption_unit, 
 						  production_ratio, production_unit,  waste, cost_per_unit= 0 ):
@@ -41,7 +50,6 @@ class Product(Persistent):
 										'production_ratio': production_ratio,
 										'waste' : waste,
 										'cost_per_unit': cost_per_unit}
-		# self.bill_of_materials._p_changed = True
 		self._p_changed = True
 		
 	def addActivity(self, activity_code, consumption, activity_unit, 
@@ -100,7 +108,28 @@ class Product(Persistent):
 		
 	def __str__(self):
 	
-		pass
+		materials = MaterialTrax().materials
+	
+		header = ("Product code: " + str(self.code) + "\nProduct name: " + self.name
+				  + "\nProduct description: " + self.description + "\n" )
+				  
+		material_string = "Code   Material                 Consumption  Unit       x F.P. units  Waste \n"
+
+		for code, material in self.bill_of_materials.items():
+		
+			material_string += (
+				str(code) + "      " +
+				materials[code].name + " " * ( 25 - len(materials[code].name))  +  
+				str(material["consumption"]) + " " * (13 - len(str(material["consumption"]))) +
+				material["consumption_unit"] + " " * (13 - len(material["consumption_unit"])) +
+				str(material["production_ratio"]) + " " +
+				material["production_unit"] + "        " +
+				str(material["waste"]) + "\n"
+				)
+		
+		header += material_string
+				
+		return header
 	
 	
 		
@@ -145,7 +174,8 @@ class Material(Persistent):
 		
 class Trax(object):
 
-	db = ZODB.DB(ZODB.FileStorage.FileStorage("products.fs"))
+	storage = FileStorage("products.fs")
+	db = DB(storage)
 	connection = db.open()
 	root = connection.root()
 
@@ -165,7 +195,7 @@ class ProductTrax(Trax):
 		if 'products' in self.root:
 			self.products = self.root['products']
 		else:
-			self.products = self.root['products'] = {}
+			self.products = self.root['products'] = PersistentDict()
 
 
 	def addProduct(self, code, name, description, base_unit):
@@ -179,15 +209,16 @@ class ProductTrax(Trax):
 	
 		self.products[product_code].addActivity( activity_code, consumption, activity_unit, 
 						  production_ratio, production_unit, cost_per_unit = 0)
+						  
+		transaction.commit()
 		
 	def addMaterial(self, product_code, material_code, consumption, consumption_unit, 
 						  production_ratio, production_unit,  waste, cost_per_unit= 0 ):
 						  
-		print "From ProductTrax addMaterial product name: exit"				  
-		print self.products[product_code].name
 	
 		self.products[product_code].addMaterial( material_code, consumption, consumption_unit, 
 						  production_ratio, production_unit,  waste, cost_per_unit= 0 )
+		transaction.commit()
 		
 	def list_products(self):
 		print "Product			Title"
@@ -213,7 +244,7 @@ class MaterialTrax(Trax):
 		if 'materials' in self.root:
 			self.materials = self.root['materials']
 		else:
-			self.materials = self.root['materials'] = {}
+			self.materials = self.root['materials'] = PersistentDict()
 		
 		
 	def addMaterial(self, code, name, description, cost_per_unit, base_unit):
@@ -232,7 +263,7 @@ class ActivityTrax(Trax):
 		if 'activities' in self.root:
 			self.activities = self.root['activities']
 		else:
-			self.activities = self.root['activities'] = {}
+			self.activities = self.root['activities'] = PersistentDict()
 		
 		
 	def addActivity(self, code, name, description, cost_per_unit, activity_unit):
@@ -247,15 +278,40 @@ class ActivityTrax(Trax):
 if __name__ == '__main__':
 	
 	
-	materials = MaterialTrax()	
+	# materials = MaterialTrax()	
 	
-	materials.addMaterial(1, "PPC 5mm 1000 gm2", "Polipropileno celular 5 mm 1000 grs / m2",100, "plancha")
-	materials.addMaterial(2, "PPC 5mm 1200 gm2", "Polipropileno celular 5 mm 1200 grs / m2",50, "plancha")
+	# materials.addMaterial(1, "PPC 5mm 1000 gm2", "Polipropileno celular 5 mm 1000 grs / m2",100, "plancha")
+	# materials.addMaterial(2, "PPC 5mm 1200 gm2", "Polipropileno celular 5 mm 1200 grs / m2",50, "plancha")
+	# materials.addMaterial(3, "Perfil 5mm 1000mm", "Perfil ancho 5 mm en listones de 1000mm", 1.45, "liston")
+	# materials.addMaterial(4, "Perfil 10mm 1000mm", "Perfil ancho 10 mm en listones de 1000mm", 1.45, "liston")
+	# materials.addMaterial(5, "Cantonera 100mm 5+10mm", "Cantonera de 100mm de largo por lado y ancho de 5 y 10 mm", 0.45, "unidad")
+	# materials.addMaterial(6, "Asas", "Asas ", 0.45, "unidad")
+	# materials.addMaterial(7, "Remaches 10mm flor", "Remaches 10mm en flor ", 0.15, "unidad")	
+
+	# for code, material in materials.materials.items():
+	
+		# print material
+		
+	products = ProductTrax()
+	
+	# products.addProduct(1, "Caja PPC 400x600x200 mm", "Caja para tejas", "Caja")
+	# products.addProduct(2, "Caja PPC 800x600x200 mm", "Caja para tejas", "Caja")
+	# products.addProduct(3, "Caja PPC 1000x600x200 mm", "Caja para tejas", "Caja")
+	
+	# products.addMaterial(1,1, 0.5, "plancha", 1, "caja", 5)
+	# products.addMaterial(1, 3, 1, "liston", 1, "caja", 5)
+	# products.addMaterial(1, 4, 0.5, "liston", 1, "caja", 10)
+	# products.addMaterial(1, 5, 4, "unidad", 1, "caja", 3)
+	# products.addMaterial(1, 6, 2, "unidad", 1, "caja", 1)
+	# products.addMaterial(1, 7, 8, "unidad", 1, "caja", 5)
 	
 	
-	# print materials.materials[1]
 	
-	# products = ProductTrax()
+	for code, product in products.products.items():
+	
+		print product
+	
+	
 	
 	# activities = ActivitiyTrax()
 	
@@ -269,42 +325,12 @@ if __name__ == '__main__':
 	
 	# print products.products[1].name
 	
-	products = ProductTrax()
+	# products = ProductTrax()
 	
-	print products
-	# print products.products[1].__dict__
-	# print products.products[1].__methods__
-	print products.products[1].code
-	print products.products[1].name
 
-	print '*' * 80
-	
-	#products.addMaterial(1,1, 10,"Kg.", 1, "Unit", 5)
-	# products.products[2].addMaterial(1, 10,"Kg.", 1, "Unit", 5)
-	
-	# print products.products[1].billofmaterials
-	
-	print '*' * 80
-	
-	productA = Product(1, "Caja A", "Caja PPC", "caja")
-	productB = Product(1, "Caja A", "Caja PPC", "caja")
-	
-	productB.addMaterial(1, 10,"Kg.", 1, "Unit", 5)
-	productB.addMaterial(2, 20,"Kg.", 1, "Unit", 10)
-	
-	print "Bill of materials \n", productB.bill_of_materials
-	
-	cost =  productB.CalculateCost()
-	# print cost[2].cost_per_unit
-	
-	print cost
-	
-	print "*" * 80
-	
-	# for code, material in cost.items():
-	
-		# print cost
-		# print material
+
+
+
 	
 	
 	

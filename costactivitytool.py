@@ -316,6 +316,11 @@ class ActivityTrax(Trax):
 		self.activities[code] = activity
 		transaction.commit()
 		
+	def search(self, activity_code):
+		"""Returns a activity object matching the activity code"""
+
+		return self.activities[activity_code]
+		
 class Product_Menu:
 
 	'''Display a menu respond to choices when run. '''
@@ -436,7 +441,66 @@ class Material_Menu:
 	
 		sys.exit(0)
 			
+class Activity_Menu:
+
+	'''Display a menu respond to choices when run. '''
+	def __init__(self):
+		self.activities = ActivityTrax()
+		self.choices = {
+				"1": self.show_activities,
+				"2": self.search_activity,
+				"3": self.add_activity,
+				"4": self.quit
+				}
+				
+	def display_menu(self):
+		print(""" 
+	Activity's Menu
+	
+	1. Show all activities
+	2. Search activity
+	3. Add activity
+	4. Quit 
+	""")
+	
+	def run(self):
+		"""Display menu and respond to choices."""
+		while True:
+			self.display_menu()
+			choice = str(input("Enter an option: "))
+			action = self.choices.get(choice)
+			#print action
+			if action:
+				action()
+			else:
+				print("{0} is not a valid choice".format(choice))
+				
+	def show_activities(self, activities = None):
+		if not activities:
+			for code, activity in self.activities.activities.items():
+				print activity
+					
+	def search_activity(self):
+		filter = input("Search for activity code: ")
+		activity = self.activities.search(filter)
+		print activity
+		
+	def add_activity(self):
+		
+		print "Enter the following activity information:"
+		activity_data = ["Code", "Name", "Description","Cost per unit", "Activity unit"]
+		params = []
+		for data in activity_data:
+			memo = input("Enter %s: " % (data))
+			params.append(memo)
 			
+		self.activities.addActivity(*params)
+		
+		
+	def quit(self):
+	
+		sys.exit(0)		
+		
 if __name__ == '__main__':
 	
 	
@@ -494,7 +558,9 @@ if __name__ == '__main__':
 	
 	# Product_Menu().run()
 	
-	Material_Menu().run()
+	# Material_Menu().run()
+	
+	Activity_Menu().run()
 	
 	
 

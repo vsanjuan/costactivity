@@ -255,6 +255,11 @@ class ProductTrax(Trax):
 						  production_ratio, production_unit,  waste, cost_per_unit= 0 )
 		transaction.commit()
 		
+	def search(self, product_code):
+		"""Returns a Product object matching the product code"""
+	
+		return self.products[product_code]
+		
 	def list_products(self):
 		print "Product			Title"
 		print "=======          ====="
@@ -283,11 +288,15 @@ class MaterialTrax(Trax):
 		
 		
 	def addMaterial(self, code, name, description, cost_per_unit, base_unit):
-	
+		"""Adds a new material to the catalogue"""
 		material = Material( code, name, description, cost_per_unit, base_unit)
-		print self.materials.items()
 		self.materials[code] = material
 		transaction.commit()
+		
+	def search(self, material_code):
+		"""Returns a Material object matching the material code"""
+
+		return self.materials[material_code]
 		
 class ActivityTrax(Trax):
 		
@@ -307,7 +316,7 @@ class ActivityTrax(Trax):
 		self.activities[code] = activity
 		transaction.commit()
 		
-class Menu:
+class Product_Menu:
 
 	'''Display a menu respond to choices when run. '''
 	def __init__(self):
@@ -316,8 +325,7 @@ class Menu:
 				"1": self.show_products,
 				"2": self.search_product,
 				"3": self.add_product,
-				"4": self.modify_product,
-				"5": self.quit
+				"4": self.quit
 				}
 				
 	def display_menu(self):
@@ -325,10 +333,9 @@ class Menu:
 	Product's Menu
 	
 	1. Show all products
-	2. Buscar productos
+	2. Search product
 	3. Add Product
-	4. Modify product
-	5. Quit 
+	4. Quit 
 	""")
 	
 	def run(self):
@@ -336,7 +343,6 @@ class Menu:
 		while True:
 			self.display_menu()
 			choice = str(input("Enter an option: "))
-			print type(choice)
 			action = self.choices.get(choice)
 			print action
 			if action:
@@ -350,14 +356,14 @@ class Menu:
 				print product
 					
 	def search_product(self):
-		filter = input("Search for: ")
-		notes = self.products.search(filter)
-		self.show_products(products)
+		filter = input("Search for product code: ")
+		product = self.products.search(filter)
+		print product
 		
 	def add_product(self):
 		
 		print "Enter the following product information:"
-		product_data = ["Code", "Name", "Description", "Unidad base"]
+		product_data = ["Code", "Name", "Description", "Base unit"]
 		params = []
 		for data in product_data:
 			memo = input("Enter %s: " % (data))
@@ -365,9 +371,66 @@ class Menu:
 			
 		self.products.addProduct(*params)
 		
-	def modify_product(self):
+		
+	def quit(self):
 	
-		print "Modifies the product"
+		sys.exit(0)
+		
+class Material_Menu:
+
+	'''Display a menu respond to choices when run. '''
+	def __init__(self):
+		self.materials = MaterialTrax()
+		self.choices = {
+				"1": self.show_materials,
+				"2": self.search_material,
+				"3": self.add_material,
+				"4": self.quit
+				}
+				
+	def display_menu(self):
+		print(""" 
+	Material's Menu
+	
+	1. Show all materials
+	2. Search material
+	3. Add material
+	4. Quit 
+	""")
+	
+	def run(self):
+		"""Display menu and respond to choices."""
+		while True:
+			self.display_menu()
+			choice = str(input("Enter an option: "))
+			action = self.choices.get(choice)
+			#print action
+			if action:
+				action()
+			else:
+				print("{0} is not a valid choice".format(choice))
+				
+	def show_materials(self, materials = None):
+		if not materials:
+			for code, material in self.materials.materials.items():
+				print material
+					
+	def search_material(self):
+		filter = input("Search for material code: ")
+		material = self.materials.search(filter)
+		print material
+		
+	def add_material(self):
+		
+		print "Enter the following material information:"
+		material_data = ["Code", "Name", "Description","Cost per unit", "Base unit"]
+		params = []
+		for data in material_data:
+			memo = input("Enter %s: " % (data))
+			params.append(memo)
+			
+		self.materials.addMaterial(*params)
+		
 		
 	def quit(self):
 	
@@ -429,7 +492,9 @@ if __name__ == '__main__':
 	
 	
 	
-	Menu().run()
+	# Product_Menu().run()
+	
+	Material_Menu().run()
 	
 	
 

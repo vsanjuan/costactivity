@@ -330,6 +330,8 @@ class Product_Menu:
 				"1": self.show_products,
 				"2": self.search_product,
 				"3": self.add_product,
+				"3.1": self.add_material,
+				"3.2": self.add_activity,
 				"4": self.quit
 				}
 				
@@ -340,6 +342,8 @@ class Product_Menu:
 	1. Show all products
 	2. Search product
 	3. Add Product
+	3.1. Add material
+	3.2. Add activity
 	4. Quit 
 	""")
 	
@@ -359,6 +363,7 @@ class Product_Menu:
 		if not products:
 			for code, product in self.products.products.items():
 				print product
+				
 					
 	def search_product(self):
 		filter = input("Search for product code: ")
@@ -375,6 +380,29 @@ class Product_Menu:
 			params.append(memo)
 			
 		self.products.addProduct(*params)
+		
+	def add_material(self):
+		product_code = input("Please enter product code: ")
+		
+		while True: 
+		
+			material_data = [ "Material code" , "Consumption", "Consumption unit", 
+							  "Production ratio", "Production unit" ,  "Waste"]
+			params = [product_code]
+			
+			for data in material_data:
+				memo = input("Enter %s: " % (data))
+				params.append(memo)
+				
+			self.products.addMaterial(*params)
+			
+			answer = input("Do you want to enter another material(Y/N)? ")
+			
+			if answer != "Y" : break
+			
+	def add_activity(self):
+	
+		pass
 		
 		
 	def quit(self):
@@ -556,11 +584,11 @@ if __name__ == '__main__':
 	
 	
 	
-	# Product_Menu().run()
+	Product_Menu().run()
 	
 	# Material_Menu().run()
 	
-	Activity_Menu().run()
+	# Activity_Menu().run()
 	
 	
 

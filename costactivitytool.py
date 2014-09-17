@@ -46,6 +46,7 @@ class Product(Persistent):
 		production_unit : Unit of production to which the production ratio is related.
 		waste: % of the material thrown to the waste.
 		'''
+		
 		self.bill_of_materials[material_code] = {'material_code': material_code,
 										'consumption': consumption * 1.0,
 										'consumption_unit' : consumption_unit,
@@ -117,6 +118,18 @@ class Product(Persistent):
 	
 		return    material_cost , activity_cost 
 		
+	def PrintCost(self):
+	
+		material_cost, activity_cost = self.CalculateCost()
+		
+		total_cost = material_cost + activity_cost
+		
+		product_str = self.__str__()
+		
+		cost_str = "Product cost: {:.2f} Material's cost: {:.2f} Activity's cost: {:.2f}".format(total_cost, material_cost, activity_cost)
+					
+		return  product_str + cost_str + "\n"
+		
 	def __str__(self):
 	
 		materials = MaterialTrax().materials
@@ -171,8 +184,17 @@ class Product(Persistent):
 	
 		
 class Activity(Persistent):
+	"""Models the activities needed to make the products and  the information
+	needed to calculate its costs.
+	Parameters:
+	Code: Material code. It's an integer.
+	Name: Material name. The name should be descriptive enough to differentiate from any other material.
+	Description: Additional information that will help to describe the material.
+	Cost per unit: Cost in Euros of the material according to the base unit.
+	Base unit: Unit in which the material is used."""
 
 	def __init__(self, code, name, description, cost_per_unit, activity_unit):
+
 		self.code = code
 		self.name = name
 		self.description = description
@@ -190,6 +212,14 @@ class Activity(Persistent):
 		
 		
 class Material(Persistent):
+	"""Models the materials used by the company to make it's products and compiles the information
+	needed to calculate its costs.
+	Parameters:
+	Code: Material code. It's an integer.
+	Name: Material name. The name should be descriptive enough to differentiate from any other material.
+	Description: Additional information that will help to describe the material.
+	Cost per unit: Cost in Euros of the material according to the base unit.
+	Base unit: Unit in which the material is used."""
 	
 	def __init__(self, code, name, description, cost_per_unit, base_unit):
 		self.code = code
@@ -208,6 +238,7 @@ class Material(Persistent):
 				% (self.code, self.name, self.description, self.cost_per_unit, self.base_unit))
 		
 class Trax(object):
+	"""Superclass that allows to manage the company's product cost information."""
 
 	storage = FileStorage("products.fs")
 	db = DB(storage)
@@ -221,6 +252,9 @@ class Trax(object):
 
 		
 class ProductTrax(Trax):
+	"""Models the Company's product catalogue. If the database
+	product's dictionary hasn't been created it creates it otherwise
+	loads the data from the database."""
 
 	def __init__(self, intro = "Product trax  tracking helper",
 			 db_path="products.fs"):
@@ -234,6 +268,7 @@ class ProductTrax(Trax):
 
 
 	def addProduct(self, code, name, description, base_unit):
+		"""Add a new product to the Company's catalogue."""
 		
 		product = Product( code, name, description, base_unit)
 		self.products[code] = product
@@ -241,6 +276,9 @@ class ProductTrax(Trax):
 		
 	def addActivity(self, product_code, activity_code, consumption, activity_unit, 
 						  production_ratio, production_unit, cost_per_unit = 0):
+		"""Adds a new activity to the bill of activities of an existent product. The parameters
+		are the same of the Product class plus the product's code to which we add the activity"""				  
+		
 	
 		self.products[product_code].addActivity( activity_code, consumption, activity_unit, 
 						  production_ratio, production_unit, cost_per_unit = 0)
@@ -249,6 +287,8 @@ class ProductTrax(Trax):
 		
 	def addMaterial(self, product_code, material_code, consumption, consumption_unit, 
 						  production_ratio, production_unit,  waste, cost_per_unit= 0 ):
+		"""Adds a new material to the bill of materials of an existent product. The parameters
+		are the same of the Product class plus the product's code to which we add the activity"""	
 						  
 	
 		self.products[product_code].addMaterial( material_code, consumption, consumption_unit, 
@@ -260,22 +300,12 @@ class ProductTrax(Trax):
 	
 		return self.products[product_code]
 		
-	def list_products(self):
-		print "Product			Title"
-		print "=======          ====="
-		for name, product in self.products.items():
-			print "%-20s%s" % (name, product.description)
-			
-	def list_materials(self, productcode):
-		print "Product: %s" % productcode
-		print
-		print " Material"
-		print "========="
-		for productcode, product in self.products[productcode].materials.items():
-			print product.name
 			
 			
 class MaterialTrax(Trax):
+		"""Models the Company's material catalogue. If the database
+	material's dictionary hasn't been created it creates it otherwise
+	loads the data from the database."""
 		
 	def __init__(self, intro = "Material trax  tracking helper",
 			 db_path="products.fs"):
@@ -332,7 +362,9 @@ class Product_Menu:
 				"3": self.add_product,
 				"3.1": self.add_material,
 				"3.2": self.add_activity,
-				"4": self.quit
+				"4": self.calculate_cost,
+				"5": self.return_main,
+				"6": self.quit
 				}
 				
 	def display_menu(self):
@@ -342,9 +374,11 @@ class Product_Menu:
 	1. Show all products
 	2. Search product
 	3. Add Product
-	3.1. Add material
-	3.2. Add activity
-	4. Quit 
+	3.1. Add Material to a product
+	3.2. Add Activity to a product
+	4. Calculate product cost
+	5. Return to the main menu
+	6. Quit 
 	""")
 	
 	def run(self):
@@ -353,7 +387,6 @@ class Product_Menu:
 			self.display_menu()
 			choice = str(input("Enter an option: "))
 			action = self.choices.get(choice)
-			print action
 			if action:
 				action()
 			else:
@@ -396,15 +429,39 @@ class Product_Menu:
 				
 			self.products.addMaterial(*params)
 			
-			answer = input("Do you want to enter another material(Y/N)? ")
+			answer = str(input("Do you want to enter another material(Y/N)? "))
 			
 			if answer != "Y" : break
+					
 			
 	def add_activity(self):
+		activity_code = input("Please enter product code: ")
+		
+		while True: 
+		
+			material_data = [ "Activity code" , "Consumption", "Activity unit", 
+							  "Output ratio", "Output unit" ]
+			params = [activity_code]
+			
+			for data in material_data:
+				memo = input("Enter %s: " % (data))
+				params.append(memo)
+				
+			self.products.addActivity(*params)
+			
+			answer = str(input("Do you want to enter another material(Y/N)? "))
+			
+			if answer != "Y" : break	
+
+	def calculate_cost(self):
+		product_code = input("Please enter product code: ")
+		
+		print self.products.products[product_code].PrintCost()
+		
+	def return_main(self):
 	
-		pass
-		
-		
+		Menu().run()
+			
 	def quit(self):
 	
 		sys.exit(0)
@@ -418,7 +475,8 @@ class Material_Menu:
 				"1": self.show_materials,
 				"2": self.search_material,
 				"3": self.add_material,
-				"4": self.quit
+				"4": self.return_main,
+				"5": self.quit
 				}
 				
 	def display_menu(self):
@@ -428,7 +486,8 @@ class Material_Menu:
 	1. Show all materials
 	2. Search material
 	3. Add material
-	4. Quit 
+	4. Return to main menu
+	5. Quit 
 	""")
 	
 	def run(self):
@@ -464,6 +523,10 @@ class Material_Menu:
 			
 		self.materials.addMaterial(*params)
 		
+	def return_main(self):
+	
+		Menu().run()
+		
 		
 	def quit(self):
 	
@@ -478,7 +541,8 @@ class Activity_Menu:
 				"1": self.show_activities,
 				"2": self.search_activity,
 				"3": self.add_activity,
-				"4": self.quit
+				"4": self.return_main,
+				"5": self.quit
 				}
 				
 	def display_menu(self):
@@ -488,7 +552,8 @@ class Activity_Menu:
 	1. Show all activities
 	2. Search activity
 	3. Add activity
-	4. Quit 
+	4. Return to main menu
+	5. Quit 
 	""")
 	
 	def run(self):
@@ -524,6 +589,56 @@ class Activity_Menu:
 			
 		self.activities.addActivity(*params)
 		
+	def return_main(self):
+	
+		Menu().run()
+		
+		
+	def quit(self):
+	
+		sys.exit(0)		
+		
+class Menu:
+
+	'''Display a menu respond to choices when run. '''
+	def __init__(self):
+		self.activities = ActivityTrax()
+		self.choices = {
+				"1": self.products_menu,
+				"2": self.materials_menu,
+				"3": self.activities_menu,
+				"4": self.quit
+				}
+				
+	def display_menu(self):
+		print(""" 
+	Main Menu
+	
+	1. Products
+	2. Materials
+	3. Activities
+	4. Quit 
+	""")
+	
+	def run(self):
+		"""Display menu and respond to choices."""
+		while True:
+			self.display_menu()
+			choice = str(input("Enter an option: "))
+			action = self.choices.get(choice)
+			if action:
+				action()
+			else:
+				print("{0} is not a valid choice".format(choice))
+				
+	def products_menu(self):
+		Product_Menu().run()
+					
+	def materials_menu(self):
+		Material_Menu().run()
+		
+	def activities_menu(self):
+		Activity_Menu().run()
 		
 	def quit(self):
 	
@@ -584,12 +699,13 @@ if __name__ == '__main__':
 	
 	
 	
-	Product_Menu().run()
+	# Product_Menu().run()
 	
 	# Material_Menu().run()
 	
 	# Activity_Menu().run()
 	
+	Menu().run()
 	
 
 	

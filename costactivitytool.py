@@ -339,7 +339,7 @@ class ProductTrax(Trax):
 		
 		
 		if product_code not in self.products:
-			return False, "Product code does not exist."
+			return False, {'code_not_catalogue':"Product code does not exist."}
 		else:
 			product = self.products[product_code]
 			valid, errors = product.addMaterial( material_code, consumption, consumption_unit, 
@@ -507,12 +507,17 @@ class Product_Menu:
 			product_code = raw_input("Please enter product code: ").strip()
 			if product_code.isdigit(): 
 				product_code = int(product_code)
+				if self.products.search(product_code) == False :
+					answer =  raw_input("Product code does not exist. Do you want to try again(Y/N) ").strip()
+					if answer == "y": continue
+					else: self.return_main() 
 				break
 			else:
 				print "Please enter a valid product code. Must be a number"
 				continue
 		
-		while True: 
+		while True:
+		
 			while True:
 				material_data = [ "Material code" , "Consumption", "Consumption unit", 
 								  "Production ratio", "Production unit" ,  "Waste"]
@@ -535,8 +540,7 @@ class Product_Menu:
 					answer = raw_input("Do you want to enter the information again?(Y/N):  ")
 					if answer.lower() != "y": break
 						
-				else:
-					break
+				break
 				
 			answer = raw_input("Do you want to enter another material(Y/N)? ")
 			

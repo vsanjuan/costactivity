@@ -288,7 +288,10 @@ class ProductTrax(Trax):
 		transaction.commit()
 		
 	def search(self, product_code):
-		"""Returns a Product object matching the product code"""
+		"""Returns a Product object matching the product code or false if there
+		is not a product with such code"""
+		if product_code not in self.products:
+			return False
 	
 		return self.products[product_code]
 		
@@ -316,7 +319,10 @@ class MaterialTrax(Trax):
 		transaction.commit()
 		
 	def search(self, material_code):
-		"""Returns a Material object matching the material code"""
+		"""Returns a Material object matching the material code or false if there
+		is not an material with such code"""
+		if material_code not in self.materials:
+			return False
 
 		return self.materials[material_code]
 		
@@ -339,7 +345,11 @@ class ActivityTrax(Trax):
 		transaction.commit()
 		
 	def search(self, activity_code):
-		"""Returns a activity object matching the activity code"""
+		"""Returns a activity object matching the activity code or false if there
+		is not an activity with such code"""
+		
+		if activity_code not in self.activities:
+			return False
 
 		return self.activities[activity_code]
 		
@@ -387,12 +397,30 @@ class Product_Menu:
 		if not products:
 			for code, product in self.products.products.items():
 				print product
-				
 					
 	def search_product(self):
-		filter = input("Search for product code: ")
-		product = self.products.search(filter)
-		print product
+			
+		filter = raw_input("Search for product code: ")
+		
+		if filter.isdigit():
+			
+			filter = int(filter)
+			product = self.products.search(filter)
+			if not product:
+				print "Product code does not exist."
+				answer = raw_input("Do you want to try again?(Y/N) ")
+				if answer.lower() == "y":
+					self.search_product()
+				else:
+					self.return_main()
+					
+			print product
+			
+		else: 
+			
+			print "The product code must be an integer. Try again. "
+			self.search_product()
+
 		
 	def add_product(self):
 		

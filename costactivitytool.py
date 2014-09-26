@@ -45,16 +45,65 @@ class Product(Persistent):
 		production_ratio: Units of F.P. to which the consumption is referred.
 		production_unit : Unit of production to which the production ratio is related.
 		waste: % of the material thrown to the waste.
+		
+		The function returns a Boolean and an error dictionary. If any of the parameters
+		is not valid False and errors are returned. 
 		'''
 		
-		self.bill_of_materials[material_code] = {'material_code': material_code,+
-										'consumption': consumption * 1.0,
-										'consumption_unit' : consumption_unit,
-										'production_unit': production_unit,
-										'production_ratio': production_ratio * 1.0,
-										'waste' : waste * 1.0 ,
-										'cost_per_unit': cost_per_unit * 1.0}
-		self._p_changed = True
+		# First of all the the information validity is checked
+		
+		# access material information to check code's validity
+		materialtrax = MaterialTrax().materials
+		# initializes a dictionary where to save the information errors.
+		errors = {}
+		# flag to stop saving the information if an error arises.
+		information_is_valid = True
+		
+		if type(material_code) == int or type(material_code) == float :
+			material_code =int(material_code)
+			if material_code not in materialtrax:
+				errors['material_code'] = "Material code does not exist"
+				information_is_valid = False
+		else:
+			errors['material_code'] = "Material code must be an integer"
+			information_is_valid = False
+
+		if type(consumption) != float :
+			errors['consumption'] = "Consumption must be a number"
+			information_is_valid = False
+			
+		if type(production_ratio) != float :
+			errors['production_ratio'] = "Production ratio must be a number"
+			
+		if type(waste) == float:
+			if waste > 100:
+				errors['waste'] = "Waste cannot be greater than 100"
+				information_is_valid = False
+		else:
+			errors['waste'] = "Waste must be a number between 0 and 100"
+			information_is_valid = False
+			
+		# if it is not valid it returns the errors detected so they can be 
+		# corrected
+		
+		print information_is_valid, " antes de registrar la informacion"
+		
+		if information_is_valid :
+			self.bill_of_materials[material_code] = {'material_code': material_code,
+								'consumption': consumption,
+								'consumption_unit' : consumption_unit,
+								'production_unit': production_unit,
+								'production_ratio': production_ratio * 1.0,
+								'waste' : waste * 1.0 ,
+								'cost_per_unit': cost_per_unit * 1.0}
+			self._p_changed = True
+			print errors
+			print information_is_valid
+			return True, errors
+		else:		
+			return False, errors
+			
+
 		
 	def addActivity(self, activity_code, consumption, activity_unit, 
 						  production_ratio, production_unit, cost_per_unit = 0):
@@ -260,11 +309,17 @@ class ProductTrax(Trax):
 
 
 	def addProduct(self, code, name, description, base_unit):
-		"""Add a new product to the Company's catalogue."""
+		"""Adds a new product to the Company's catalogue. If the code is 
+		already in use or is not valid returns False. If is valid returns
+		True"""
+		
+		if not code.isdigit() or int(code) in self.products:
+			return False
 		
 		product = Product( code, name, description, base_unit)
 		self.products[code] = product
 		transaction.commit()
+		return True
 		
 	def addActivity(self, product_code, activity_code, consumption, activity_unit, 
 						  production_ratio, production_unit, cost_per_unit = 0):
@@ -280,12 +335,20 @@ class ProductTrax(Trax):
 	def addMaterial(self, product_code, material_code, consumption, consumption_unit, 
 						  production_ratio, production_unit,  waste, cost_per_unit= 0 ):
 		"""Adds a new material to the bill of materials of an existent product. The parameters
-		are the same of the Product class plus the product's code to which we add the activity"""	
-						  
-	
-		self.products[product_code].addMaterial( material_code, consumption, consumption_unit, 
-						  production_ratio, production_unit,  waste, cost_per_unit= 0 )
-		transaction.commit()
+		are the same of the Product class plus the product's code to which we add the activity"""
+		
+		
+		if product_code not in self.products:
+			return False, "Product code does not exist."
+		else:
+			product = self.products[product_code]
+			valid, errors = product.addMaterial( material_code, consumption, consumption_unit, 
+							  production_ratio, production_unit,  waste, cost_per_unit= 0 )
+			if valid:
+				transaction.commit()
+				return True, errors
+			else:
+				return False, errors
 		
 	def search(self, product_code):
 		"""Returns a Product object matching the product code or false if there
@@ -425,32 +488,59 @@ class Product_Menu:
 	def add_product(self):
 		
 		print "Enter the following product information:"
-		product_data = ["Code", "Name", "Description", "Base unit"]
+		product_data = ["Product's code", "Name", "Description", "Base unit"]
 		params = []
 		for data in product_data:
-			memo = input("Enter %s: " % (data))
+			memo = raw_input("Enter %s: " % (data))
 			params.append(memo)
 			
-		self.products.addProduct(*params)
+		if not params[0].isdigit():
+			print "Product's code must be an integer. Try again."
+			self.add_product()
+			
+		if not self.products.addProduct(*params):
+			print "*" * 84
+			print "Product code in use. Please enter a new code. \n"
 		
 	def add_material(self):
-		product_code = input("Please enter product code: ")
+		while True:
+			product_code = raw_input("Please enter product code: ").strip()
+			if product_code.isdigit(): 
+				product_code = int(product_code)
+				break
+			else:
+				print "Please enter a valid product code. Must be a number"
+				continue
 		
 		while True: 
-		
-			material_data = [ "Material code" , "Consumption", "Consumption unit", 
-							  "Production ratio", "Production unit" ,  "Waste"]
-			params = [product_code]
-			
-			for data in material_data:
-				memo = input("Enter %s: " % (data))
-				params.append(memo)
+			while True:
+				material_data = [ "Material code" , "Consumption", "Consumption unit", 
+								  "Production ratio", "Production unit" ,  "Waste"]
+				params = [product_code]
 				
-			self.products.addMaterial(*params)
+				for data in material_data:
+					memo = raw_input("Enter %s: " % (data)).strip()
+					if memo.isdigit(): memo = float(memo)
+					params.append(memo)
+					
+				print params
+					
+				valid_data, errors = self.products.addMaterial(*params)
+				
+				if not valid_data:
+					print "The following errors must be corrected"
+					for error in errors.values():
+						print error, 
+						
+					answer = raw_input("Do you want to enter the information again?(Y/N):  ")
+					if answer.lower() != "y": break
+						
+				else:
+					break
+				
+			answer = raw_input("Do you want to enter another material(Y/N)? ")
 			
-			answer = str(input("Do you want to enter another material(Y/N)? "))
-			
-			if answer != "Y" : break
+			if answer.lower() != "y" : break
 					
 			
 	def add_activity(self):

@@ -47,7 +47,7 @@ class Product(Persistent):
 		waste: % of the material thrown to the waste.
 		'''
 		
-		self.bill_of_materials[material_code] = {'material_code': material_code,
+		self.bill_of_materials[material_code] = {'material_code': material_code,+
 										'consumption': consumption * 1.0,
 										'consumption_unit' : consumption_unit,
 										'production_unit': production_unit,
@@ -201,10 +201,6 @@ class Activity(Persistent):
 		self.cost_per_unit = cost_per_unit
 		self.activity_unit = activity_unit
 		
-	def cost_per_product(self, product, consumption):
-		
-		return consumption * self.cost_per_unit
-		
 	def __str__(self):
 
 		return ("Activity Code: %s, Name: %s,\n Description: %s,\n Cost per unit: %s\n Base unit: %s"
@@ -227,10 +223,6 @@ class Material(Persistent):
 		self.description = description
 		self.cost_per_unit = cost_per_unit
 		self.base_unit = base_unit
-	
-	def cost_per_product(self, consumption):
-	
-		return consumption * self.cost_per_unit
 	
 	def __str__(self):
 	
@@ -303,7 +295,7 @@ class ProductTrax(Trax):
 			
 			
 class MaterialTrax(Trax):
-		"""Models the Company's material catalogue. If the database
+	"""Models the Company's material catalogue. If the database
 	material's dictionary hasn't been created it creates it otherwise
 	loads the data from the database."""
 		
@@ -370,7 +362,6 @@ class Product_Menu:
 	def display_menu(self):
 		print(""" 
 	Product's Menu
-	
 	1. Show all products
 	2. Search product
 	3. Add Product
@@ -594,6 +585,7 @@ class Activity_Menu:
 		Menu().run()
 		
 		
+		
 	def quit(self):
 	
 		sys.exit(0)		
@@ -602,7 +594,6 @@ class Menu:
 
 	'''Display a menu respond to choices when run. '''
 	def __init__(self):
-		self.activities = ActivityTrax()
 		self.choices = {
 				"1": self.products_menu,
 				"2": self.materials_menu,

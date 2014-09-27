@@ -84,10 +84,7 @@ class Product(Persistent):
 			information_is_valid = False
 			
 		# if it is not valid it returns the errors detected so they can be 
-		# corrected
-		
-		print information_is_valid, " antes de registrar la informacion"
-		
+		# correct		
 		if information_is_valid :
 			self.bill_of_materials[material_code] = {'material_code': material_code,
 								'consumption': consumption,
@@ -97,8 +94,6 @@ class Product(Persistent):
 								'waste' : waste * 1.0 ,
 								'cost_per_unit': cost_per_unit * 1.0}
 			self._p_changed = True
-			print errors
-			print information_is_valid
 			return True, errors
 		else:		
 			return False, errors
@@ -115,13 +110,46 @@ class Product(Persistent):
 		production_ratio: Units of F.P. to which the consumption is referred.
 		production_unit : Unit of production to which the production ratio is related.
 		"""
-		self.bill_of_activities[activity_code] = {	'activity_code': activity_code, 
-											'consumption': consumption * 1.0 ,
-											'activity_unit': activity_unit,
-											'production_ratio': production_ratio * 1.0 ,
-											'production_unit': production_unit,
-											'cost_per_unit' : cost_per_unit * 1.0	}
-		self._p_changed = True
+		
+				# First of all the the information validity is checked
+		
+		# access material information to check code's validity
+		activitytrax = ActivityTrax().activities
+		# initializes a dictionary where to save the information errors.
+		errors = {}
+		# flag to stop saving the information if an error arises.
+		information_is_valid = True
+		
+		if type(activity_code) == int or type(activity_code) == float :
+			activity_code =int(activity_code)
+			if activity_code not in activitytrax:
+				errors['material_code'] = "Activity code does not exist"
+				information_is_valid = False
+		else:
+			errors['activity_code'] = "Activity code must be an integer"
+			information_is_valid = False
+
+		if type(consumption) != float :
+			errors['consumption'] = "Consumption must be a number"
+			information_is_valid = False
+			
+		if type(production_ratio) != float :
+			errors['production_ratio'] = "Production ratio must be a number"
+			information_is_valid = False
+			
+			
+		if information_is_valid:	
+			
+			self.bill_of_activities[activity_code] = {	'activity_code': activity_code, 
+												'consumption': consumption * 1.0 ,
+												'activity_unit': activity_unit,
+												'production_ratio': production_ratio * 1.0 ,
+												'production_unit': production_unit,
+												'cost_per_unit' : cost_per_unit * 1.0	}
+			self._p_changed = True
+			return True, errors
+			
+		return False, errors
 		
 		
 	def CalculateCost(self):
@@ -326,11 +354,18 @@ class ProductTrax(Trax):
 		"""Adds a new activity to the bill of activities of an existent product. The parameters
 		are the same of the Product class plus the product's code to which we add the activity"""				  
 		
-	
-		self.products[product_code].addActivity( activity_code, consumption, activity_unit, 
-						  production_ratio, production_unit, cost_per_unit = 0)
-						  
-		transaction.commit()
+		if product_code not in self.products:
+			return False, {'code_not_catalogue':"Product code does not exist."}
+		else:
+			product = self.products[product_code]
+			valid, errors = product.addActivity( activity_code, consumption, activity_unit, 
+							  production_ratio, production_unit, cost_per_unit = 0)
+							  
+			if valid: 				  
+				transaction.commit()
+				return True, errors
+			else:
+				return False, errors
 		
 	def addMaterial(self, product_code, material_code, consumption, consumption_unit, 
 						  production_ratio, production_unit,  waste, cost_per_unit= 0 ):
@@ -505,6 +540,7 @@ class Product_Menu:
 	def add_material(self):
 		while True:
 			product_code = raw_input("Please enter product code: ").strip()
+			# checks the product code is valid and belongs to an existing material
 			if product_code.isdigit(): 
 				product_code = int(product_code)
 				if self.products.search(product_code) == False :
@@ -548,23 +584,68 @@ class Product_Menu:
 					
 			
 	def add_activity(self):
-		activity_code = input("Please enter product code: ")
+		while True:
+			product_code = raw_input("Please enter product code: ").strip()
+			# checks the product code is valid and belongs to an existing material
+			if product_code.isdigit(): 
+				product_code = int(product_code)
+				if self.products.search(product_code) == False :
+					answer =  raw_input("Product code does not exist. Do you want to try again(Y/N) ").strip()
+					if answer == "y": continue
+					else: self.return_main() 
+				break
+			else:
+				print "Please enter a valid product code. Must be a number"
+				continue
 		
-		while True: 
+		while True:
 		
-			material_data = [ "Activity code" , "Consumption", "Activity unit", 
-							  "Output ratio", "Output unit" ]
-			params = [activity_code]
-			
-			for data in material_data:
-				memo = input("Enter %s: " % (data))
-				params.append(memo)
+			while True:
+				activity_data = [ "Activity code" , "Consumption", "Activity unit", 
+								  "Production ratio", "Production unit"]
+				params = [product_code]
 				
-			self.products.addActivity(*params)
+				for data in activity_data:
+					memo = raw_input("Enter %s: " % (data)).strip()
+					if memo.isdigit(): memo = float(memo)
+					params.append(memo)
+					
+				# print params
+					
+				valid_data, errors = self.products.addActivity(*params)
+				
+				if not valid_data:
+					print "The following errors must be corrected"
+					for error in errors.values():
+						print error, 
+						
+					answer = raw_input("Do you want to enter the information again?(Y/N):  ")
+					if answer.lower() != "y": break
+						
+				break
+				
+			answer = raw_input("Do you want to enter another activity(Y/N)? ")
 			
-			answer = str(input("Do you want to enter another material(Y/N)? "))
+			if answer.lower() != "y" : break
+	
+	
+		# activity_code = input("Please enter product code: ")
+		
+		# while True: 
+		
+			# activity_data = [ "Activity code" , "Consumption", "Activity unit", 
+							  # "Output ratio", "Output unit" ]
+			# params = [activity_code]
 			
-			if answer != "Y" : break	
+			# for data in activity_data:
+				# memo = input("Enter %s: " % (data))
+				# params.append(memo)
+				
+			# self.products.addActivity(*params)
+			
+			# answer = str(input("Do you want to enter another material(Y/N)? "))
+			
+			# if answer != "Y" : break	
 
 	def calculate_cost(self):
 		product_code = input("Please enter product code: ")

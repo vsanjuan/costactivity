@@ -68,7 +68,7 @@ class Product(Persistent):
 		# flag to stop saving the information if an error arises.
 		information_is_valid = True
 		
-		if type(material_code) == int or type(material_code) == float :
+		if is_number(material_code) :
 			material_code =int(material_code)
 			if material_code not in materialtrax:
 				errors['material_code'] = "Material code does not exist"
@@ -76,18 +76,24 @@ class Product(Persistent):
 		else:
 			errors['material_code'] = "Material code must be an integer"
 			information_is_valid = False
-
-		if type(consumption) != float :
+		
+		if is_number(consumption):
+			consumption = float(consumption)
+		else:
 			errors['consumption'] = "Consumption must be a number"
 			information_is_valid = False
-			
-		if type(production_ratio) != float :
+		
+		if is_number(production_ratio):
+			production_ratio = float(production_ratio)
+		else:
 			errors['production_ratio'] = "Production ratio must be a number"
 			
-		if type(waste) == float:
-			if waste > 100:
+		if is_number(waste):
+			if waste > 100 or waste < 0:
 				errors['waste'] = "Waste cannot be greater than 100"
 				information_is_valid = False
+			else:
+				waste = float(waste)
 		else:
 			errors['waste'] = "Waste must be a number between 0 and 100"
 			information_is_valid = False
@@ -129,7 +135,7 @@ class Product(Persistent):
 		# flag to stop saving the information if an error arises.
 		information_is_valid = True
 		
-		if type(activity_code) == int or type(activity_code) == float :
+		if is_number(activity_code) :
 			activity_code =int(activity_code)
 			if activity_code not in activitytrax:
 				errors['material_code'] = "Activity code does not exist"
@@ -138,11 +144,15 @@ class Product(Persistent):
 			errors['activity_code'] = "Activity code must be an integer"
 			information_is_valid = False
 
-		if type(consumption) != float :
+		if is_number(consumption) :
+			consumption = float(consumption)
+		else:
 			errors['consumption'] = "Consumption must be a number"
 			information_is_valid = False
 			
-		if type(production_ratio) != float :
+		if is_number(production_ratio):
+			production_ratio = float(production_ratio)
+		else:
 			errors['production_ratio'] = "Production ratio must be a number"
 			information_is_valid = False
 			
@@ -392,6 +402,7 @@ class ProductTrax(Trax):
 				transaction.commit()
 				return True, errors
 			else:
+				print errors
 				return False, errors
 		
 	def search(self, product_code):
@@ -471,10 +482,34 @@ class ActivityTrax(Trax):
 		
 		
 	def addActivity(self, code, name, description, cost_per_unit, activity_unit):
-	
-		activity = Activity( code, name, description, cost_per_unit, activity_unit)
-		self.activities[code] = activity
-		transaction.commit()
+		"""Adds a new activity to the catalogue. If the activity already exists
+		or any of the parameters do not meet the requirements returns False and an error dictionary.
+		If all parameters are right returns True and an empty errors dictionary"""
+		errors = {}
+		information_is_valid = True
+		if is_number(code):
+			code = int(code)
+			if code in self.activities:
+				errors['duplicate_code'] = "Activity code already exists. "
+				information_is_valid = False
+		else:
+			errors['wrong_code'] = "Material code must be an integer. "
+			information_is_valid = False
+			
+		if is_number(cost_per_unit):
+			cost_per_unit = float(cost_per_unit)
+		else:
+			errors['wrong_cost_per_unit'] = "Cost per unit must be a number"
+			information_is_valid = False
+						
+		if information_is_valid:
+			activity = Activity( code, name, description, cost_per_unit, activity_unit)
+			self.activities[code] = activity		
+			transaction.commit()
+			return True, errors
+			
+		return False, errors
+
 		
 	def search(self, activity_code):
 		"""Returns a activity object matching the activity code or false if there
@@ -518,7 +553,7 @@ class Product_Menu:
 		"""Display menu and respond to choices."""
 		while True:
 			self.display_menu()
-			choice = str(input("Enter an option: "))
+			choice = raw_input("Enter an option: ").strip(' .')
 			action = self.choices.get(choice)
 			if action:
 				action()
@@ -704,9 +739,8 @@ class Material_Menu:
 		"""Display menu and respond to choices."""
 		while True:
 			self.display_menu()
-			choice = str(input("Enter an option: "))
+			choice = raw_input("Enter an option: ").strip(' .')
 			action = self.choices.get(choice)
-			#print action
 			if action:
 				action()
 			else:
@@ -784,7 +818,7 @@ class Activity_Menu:
 		"""Display menu and respond to choices."""
 		while True:
 			self.display_menu()
-			choice = str(input("Enter an option: "))
+			choice = raw_input("Enter an option: ").strip(' .')
 			action = self.choices.get(choice)
 			#print action
 			if action:
@@ -803,15 +837,39 @@ class Activity_Menu:
 		print activity
 		
 	def add_activity(self):
-		
-		print "Enter the following activity information:"
-		activity_data = ["Code", "Name", "Description","Cost per unit", "Activity unit"]
-		params = []
-		for data in activity_data:
-			memo = input("Enter %s: " % (data))
-			params.append(memo)
+	
+		while True:
+	
+			print "Enter the following activity information:"
+			activity_data = ["Code", "Name", "Description","Cost per unit", "Activity unit"]
+			params = []
+			for data in activity_data:
+				memo = raw_input("Enter %s: " % (data)).strip()
+				params.append(memo)
+				
+			valid, errors = self.activities.addActivity(*params)
 			
-		self.activities.addActivity(*params)
+			if not valid:
+				for error in errors.values():
+					print error
+					
+				answer = raw_input("Do you want to enter the information again? (Y/N) ").strip()
+				if answer.lower() == "y":
+					continue
+				else:
+					self.return_main()
+			
+			break
+		
+		
+		# print "Enter the following activity information:"
+		# activity_data = ["Code", "Name", "Description","Cost per unit", "Activity unit"]
+		# params = []
+		# for data in activity_data:
+			# memo = input("Enter %s: " % (data))
+			# params.append(memo)
+			
+		# self.activities.addActivity(*params)
 		
 	def return_main(self):
 	
@@ -848,7 +906,7 @@ class Menu:
 		"""Display menu and respond to choices."""
 		while True:
 			self.display_menu()
-			choice = str(input("Enter an option: "))
+			choice = raw_input("Enter an option: ").strip(' .')
 			action = self.choices.get(choice)
 			if action:
 				action()
@@ -913,13 +971,13 @@ if __name__ == '__main__':
 	products.addActivity(1 ,4 , 10, "minutos", 1, "Caja")
 	
 
-	for code, product in products.products.items():
+	# for code, product in products.products.items():
 	
-		print product
+		# print product
 		
-	print products.products[1].CalculateCost()
+	# print products.products[1].CalculateCost()
 	
-	print products.products[1]
+	# print products.products[1]
 	
 	
 	

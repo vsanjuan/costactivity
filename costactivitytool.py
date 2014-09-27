@@ -15,6 +15,15 @@ from persistent.list import PersistentList
 #To exit the menu
 import sys
 
+
+#Helper function to check the type before converting
+def is_number(s):
+	try:
+		float(s)
+		return True
+	except ValueError:
+		return False
+
 class Product(Persistent):
 	"""Models a product composition by listing the materials and activities
 	needed to produce it.
@@ -341,7 +350,7 @@ class ProductTrax(Trax):
 		already in use or is not valid returns False. If is valid returns
 		True"""
 		
-		if not code.isdigit() or int(code) in self.products:
+		if not is_number(code):
 			return False
 		
 		product = Product( code, name, description, base_unit)
@@ -411,10 +420,35 @@ class MaterialTrax(Trax):
 		
 		
 	def addMaterial(self, code, name, description, cost_per_unit, base_unit):
-		"""Adds a new material to the catalogue"""
-		material = Material( code, name, description, cost_per_unit, base_unit)
-		self.materials[code] = material
-		transaction.commit()
+		"""Adds a new material to the catalogue. If the material already exists
+		or any of the parameters do not meet the requirements returns False and an error dictionary.
+		If all parameters are right returns True and an empty errors dictionary"""
+		errors = {}
+		information_is_valid = True
+		if is_number(code):
+			code = int(code)
+			if code in self.materials:
+				errors['duplicate_code'] = "Material code already exists. "
+				information_is_valid = False
+		else:
+			errors['wrong_code'] = "Material code must be an integer. "
+			information_is_valid = False
+			
+		if is_number(cost_per_unit):
+			cost_per_unit = float(cost_per_unit)
+		else:
+			errors['wrong_cost_per_unit'] = "Cost per unit must be a number"
+			information_is_valid = False
+						
+				
+		if information_is_valid:
+		
+			material = Material( code, name, description, cost_per_unit, base_unit)
+			self.materials[code] = material
+			transaction.commit()
+			return True, errors
+			
+		return False, errors
 		
 	def search(self, material_code):
 		"""Returns a Material object matching the material code or false if there
@@ -561,7 +595,7 @@ class Product_Menu:
 				
 				for data in material_data:
 					memo = raw_input("Enter %s: " % (data)).strip()
-					if memo.isdigit(): memo = float(memo)
+					if is_number(memo): memo = float(memo)
 					params.append(memo)
 					
 				print params
@@ -607,7 +641,7 @@ class Product_Menu:
 				
 				for data in activity_data:
 					memo = raw_input("Enter %s: " % (data)).strip()
-					if memo.isdigit(): memo = float(memo)
+					if is_number(memo): memo = float(memo)
 					params.append(memo)
 					
 				# print params
@@ -627,25 +661,7 @@ class Product_Menu:
 			answer = raw_input("Do you want to enter another activity(Y/N)? ")
 			
 			if answer.lower() != "y" : break
-	
-	
-		# activity_code = input("Please enter product code: ")
 		
-		# while True: 
-		
-			# activity_data = [ "Activity code" , "Consumption", "Activity unit", 
-							  # "Output ratio", "Output unit" ]
-			# params = [activity_code]
-			
-			# for data in activity_data:
-				# memo = input("Enter %s: " % (data))
-				# params.append(memo)
-				
-			# self.products.addActivity(*params)
-			
-			# answer = str(input("Do you want to enter another material(Y/N)? "))
-			
-			# if answer != "Y" : break	
 
 	def calculate_cost(self):
 		product_code = input("Please enter product code: ")
@@ -707,15 +723,29 @@ class Material_Menu:
 		print material
 		
 	def add_material(self):
+	
+		while True:
 		
-		print "Enter the following material information:"
-		material_data = ["Code", "Name", "Description","Cost per unit", "Base unit"]
-		params = []
-		for data in material_data:
-			memo = input("Enter %s: " % (data))
-			params.append(memo)
+			print "Enter the following material information:"
+			material_data = ["Code", "Name", "Description","Cost per unit", "Base unit"]
+			params = []
+			for data in material_data:
+				memo = raw_input("Enter %s: " % (data)).strip()
+				params.append(memo)
+				
+			valid, errors = self.materials.addMaterial(*params)
 			
-		self.materials.addMaterial(*params)
+			if not valid:
+				for error in errors.values():
+					print error
+					
+				answer = raw_input("Do you want to enter the information again? (Y/N) ").strip()
+				if answer.lower() == "y":
+					continue
+				else:
+					self.return_main()
+			
+			break
 		
 	def return_main(self):
 	
@@ -841,55 +871,55 @@ class Menu:
 if __name__ == '__main__':
 	
 	
-	# materials = MaterialTrax()	
+	materials = MaterialTrax()	
 	
-	# materials.addMaterial(1, "PPC 5mm 1000 gm2", "Polipropileno celular 5 mm 1000 grs / m2",100, "plancha")
-	# materials.addMaterial(2, "PPC 5mm 1200 gm2", "Polipropileno celular 5 mm 1200 grs / m2",50, "plancha")
-	# materials.addMaterial(3, "Perfil 5mm 1000mm", "Perfil ancho 5 mm en listones de 1000mm", 1.45, "liston")
-	# materials.addMaterial(4, "Perfil 10mm 1000mm", "Perfil ancho 10 mm en listones de 1000mm", 1.45, "liston")
-	# materials.addMaterial(5, "Cantonera 100mm 5+10mm", "Cantonera de 100mm de largo por lado y ancho de 5 y 10 mm", 0.45, "unidad")
-	# materials.addMaterial(6, "Asas", "Asas ", 0.45, "unidad")
-	# materials.addMaterial(7, "Remaches 10mm flor", "Remaches 10mm en flor ", 0.15, "unidad")	
+	materials.addMaterial(1, "PPC 5mm 1000 gm2", "Polipropileno celular 5 mm 1000 grs / m2",100, "plancha")
+	materials.addMaterial(2, "PPC 5mm 1200 gm2", "Polipropileno celular 5 mm 1200 grs / m2",50, "plancha")
+	materials.addMaterial(3, "Perfil 5mm 1000mm", "Perfil ancho 5 mm en listones de 1000mm", 1.45, "liston")
+	materials.addMaterial(4, "Perfil 10mm 1000mm", "Perfil ancho 10 mm en listones de 1000mm", 1.45, "liston")
+	materials.addMaterial(5, "Cantonera 100mm 5+10mm", "Cantonera de 100mm de largo por lado y ancho de 5 y 10 mm", 0.45, "unidad")
+	materials.addMaterial(6, "Asas", "Asas ", 0.45, "unidad")
+	materials.addMaterial(7, "Remaches 10mm flor", "Remaches 10mm en flor ", 0.15, "unidad")	
 
-	# for code, material in materials.materials.items():
+	for code, material in materials.materials.items():
 	
-		# print material
+		print material
 		
-	# activities = ActivityTrax()
+	activities = ActivityTrax()
 	
-	# activities.addActivity(1, "Coser", "Coser", 100, "ML")
-	# activities.addActivity(2, "Cortar PPC", "Cortar plancha segun medidas", 0.8, "Corte")
-	# activities.addActivity(3, "Troquelar", "Cortar el perfil de la pieza usando un troquel", 1.2, "Golpe")
-	# activities.addActivity(4,"Ensamblar caja", "Formar la caja, poner perfiles y cantoneras, y poner los remaches", 0.20 , "minutos")
+	activities.addActivity(1, "Coser", "Coser", 100, "ML")
+	activities.addActivity(2, "Cortar PPC", "Cortar plancha segun medidas", 0.8, "Corte")
+	activities.addActivity(3, "Troquelar", "Cortar el perfil de la pieza usando un troquel", 1.2, "Golpe")
+	activities.addActivity(4,"Ensamblar caja", "Formar la caja, poner perfiles y cantoneras, y poner los remaches", 0.20 , "minutos")
 	
-	# for code, activity in activities.activities.items():
-		# print activity
+	for code, activity in activities.activities.items():
+		print activity
 		
-	# products = ProductTrax()
+	products = ProductTrax()
 	
-	# products.addProduct(1, "Caja PPC 400x600x200 mm", "Caja para tejas", "Caja")
-	# products.addProduct(2, "Caja PPC 800x600x200 mm", "Caja para tejas", "Caja")
-	# products.addProduct(3, "Caja PPC 1000x600x200 mm", "Caja para tejas", "Caja")
+	products.addProduct(1, "Caja PPC 400x600x200 mm", "Caja para tejas", "Caja")
+	products.addProduct(2, "Caja PPC 800x600x200 mm", "Caja para tejas", "Caja")
+	products.addProduct(3, "Caja PPC 1000x600x200 mm", "Caja para tejas", "Caja")
 	
-	# products.addMaterial(1,1, 0.5, "plancha", 1, "caja", 5)
-	# products.addMaterial(1, 3, 1, "liston", 1, "caja", 5)
-	# products.addMaterial(1, 4, 0.5, "liston", 1, "caja", 10)
-	# products.addMaterial(1, 5, 4, "unidad", 1, "caja", 3)
-	# products.addMaterial(1, 6, 2, "unidad", 1, "caja", 1)
-	# products.addMaterial(1, 7, 8, "unidad", 1, "caja", 5)
+	products.addMaterial(1,1, 0.5, "plancha", 1, "caja", 5)
+	products.addMaterial(1, 3, 1, "liston", 1, "caja", 5)
+	products.addMaterial(1, 4, 0.5, "liston", 1, "caja", 10)
+	products.addMaterial(1, 5, 4, "unidad", 1, "caja", 3)
+	products.addMaterial(1, 6, 2, "unidad", 1, "caja", 1)
+	products.addMaterial(1, 7, 8, "unidad", 1, "caja", 5)
 	
-	# products.addActivity(1 ,2 , 2, "Corte", 4 , "Caja")
-	# products.addActivity(1 ,3 , 1, "Golpe", 1, "Caja")
-	# products.addActivity(1 ,4 , 10, "minutos", 1, "Caja")
+	products.addActivity(1 ,2 , 2, "Corte", 4 , "Caja")
+	products.addActivity(1 ,3 , 1, "Golpe", 1, "Caja")
+	products.addActivity(1 ,4 , 10, "minutos", 1, "Caja")
 	
 
-	# for code, product in products.products.items():
+	for code, product in products.products.items():
 	
-		# print product
+		print product
 		
-	# print products.products[1].CalculateCost()
+	print products.products[1].CalculateCost()
 	
-	# print products.products[1]
+	print products.products[1]
 	
 	
 	
